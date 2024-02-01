@@ -1,0 +1,19 @@
+telegram:
+  api_id: 123456789   #https://my.telegram.org/apps 获取到的api_id
+  api_hash: "12345678999876543210"     #https://my.telegram.org/apps 获取到的App api_hash  这里双引号别丢
+  session_name: "translate"
+
+openai:
+  base_url: "https://oneapi.iil.im/v1"
+  api_key: "sk-efypT4gZVPCUMWYj3c35Be97E8614f82B587E597C61c7e17"   #提供的免费coze gpt4 除了翻译慢点，质量比gpt3.5好太多了  你也可以自己设置3.5
+  
+
+target_users: #被翻译的人，一行一个， 把对方发送的英文翻译为中文（群内也会翻译他） 
+  - 5001717356
+  - 1412647738  #AI精神病院的 fofa
+  - 805275901  #始皇群的某个老外
+
+
+target_groups: #翻译自己发送的中文为 中英 ，一行一个， 被添加的人或群，对他们发送消息翻译为中英。
+  - -1002103720350  #AI精神院
+  - -1001680975844  #始皇群  
