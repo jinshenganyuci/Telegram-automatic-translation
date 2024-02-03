@@ -6,10 +6,10 @@ from telethon.sync import TelegramClient
 from telethon import events
 from openai import OpenAI
 
-# 设置日志记录，便于调试和追踪程序运行情况。
+# 设置日志记录。
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# 尝试从YAML配置文件中读取必要的配置信息。
+# 尝试读取配置文件。
 try:
     with open('config.yaml', 'r', encoding='utf-8') as file:
         config = yaml.safe_load(file)
@@ -17,7 +17,7 @@ except Exception as e:
     logging.error(f"Failed to load config file: {e}")
     exit(1)
 
-# 提取Telegram和OpenAI的配置信息。
+# 提取配置信息。
 api_id = config['telegram']['api_id']
 api_hash = config['telegram']['api_hash']
 session_name = config['telegram']['session_name']
@@ -26,34 +26,25 @@ base_url = config['openai']['base_url']
 target_users = config['target_users']
 target_groups = config['target_groups']
 
-# 初始化Telegram客户端和OpenAI客户端。
+# 初始化客户端。
 client = TelegramClient(session_name, api_id, api_hash)
 openai_client = OpenAI(api_key=api_key, base_url=base_url)
 
+# 默认使用的模型。
+current_model = "coze"
 
-
-# 检查字符串是否包含中文字符。
+# 辅助函数。
 def contains_chinese(text):
     return any('\u4e00' <= character <= '\u9fff' for character in text)
 
-# 检查字符串是否完全不包含中文字符。
-def contains_no_chinese(text):
-    return all(character < '\u4e00' or character > '\u9fff' for character in text)
-
-# 检查字符串是否包含任何非中文字符。
-def contains_non_chinese(text):
-    return any(character < '\u4e00' or character > '\u9fff' for character in text)
-
-# 检查字符串是否是纯链接。
 def is_pure_url(text):
     url_pattern = r'^\s*http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+\s*$'
     return re.match(url_pattern, text) is not None
 
-# 使用OpenAI的API进行文本翻译的函数。 gpt-3.5-turbo/coze gpt4
+# 翻译函数，使用当前模型。
 def translate_text(text, target_language):
-    # 使用全局OpenAI客户端进行翻译。
     response = openai_client.chat.completions.create(
-        model="coze",
+        model=current_model,
         messages=[
             {"role": "system", "content": "You are a translation engine, only returning translated answers."},
             {"role": "user", "content": f"Translate the text to {target_language} please do not explain my original text, do not explain the translation results, Do not explain the context.:\n{text}"}
@@ -61,6 +52,20 @@ def translate_text(text, target_language):
     )
     translated_text = response.choices[0].message.content
     return translated_text
+
+# 处理命令以切换模型。
+@client.on(events.NewMessage(pattern='/fymodel'))
+async def change_model(event):
+    global current_model
+    # 分割命令文本以提取模型名称。
+    parts = event.raw_text.split(maxsplit=1)
+    if len(parts) > 1:
+        model_name = parts[1]
+        current_model = model_name
+        await event.reply(f"翻译模型已切换至: {current_model}")
+    else:
+        await event.reply("请指定要切换的模型名称。")
+
 
 # 监听新消息事件，进行消息处理。
 @client.on(events.NewMessage)
@@ -115,10 +120,9 @@ async def handle_message(event):
         # 记录处理消息时发生的异常。
         logging.error(f"Error handling message: {e}")
 
-# 启动客户端并保持运行。
+# 启动客户端。
 try:
     client.start()
     client.run_until_disconnected()
 finally:
-    # 断开客户端连接。
     client.disconnect()
